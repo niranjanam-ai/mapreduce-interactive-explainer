@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MapReduce Explained</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --card: #13161e;
+    --border: #1e2330;
+    --accent1: #4f9cf9;
+    --accent2: #f97316;
+    --accent3: #22d3a5;
+    --accent4: #a78bfa;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --highlight: #f1f5f9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 60px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent1), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .concept {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent1);
+    border-radius: 12px;
+    padding: 24px 28px;
+    max-width: 860px;
+    margin: 0 auto 60px;
+    animation: fadeUp 0.9s ease both 0.1s;
+  }
+
+  .concept h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent1);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .concept p {
+    color: #94a3b8;
+    line-height: 1.75;
+    font-size: 0.95rem;
+  }
+
+  .concept strong { color: var(--text); }
+
+  /* ─── PHASE SECTION ─── */
+  .phases {
+    max-width: 1100px;
+    margin: 0 auto 80px;
+  }
+
+  .phases-title {
+    text-align: center;
+    font-size: 0.8rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .phases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .phase-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 20px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    animation: fadeUp 0.7s ease both;
+  }
+
+  .phase-card:hover { transform: translateY(-4px); }
+
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.06;
+    background: var(--phase-color);
+  }
+
+  .phase-card .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .phase-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--phase-color);
+    margin-bottom: 8px;
+  }
+
+  .phase-card p {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+
+  .phase-icon {
+    font-size: 1.6rem;
+    margin-bottom: 10px;
+  }
+
+  /* ─── FLOW DIAGRAM ─── */
+  .diagram-section {
+    max-width: 1200px;
+    margin: 0 auto 80px;
+  }
+
+  .diagram-section h2 {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .diagram-section .sub {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 36px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .flow-wrapper {
+    overflow-x: auto;
+    padding-bottom: 16px;
+  }
+
+  .flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    min-width: 900px;
+  }
+
+  .flow-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+
+  .stage-header {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+  }
+
+  .flow-node {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    width: 90%;
+    font-size: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.7;
+    color: #94a3b8;
+    position: relative;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .flow-node:hover {
+    border-color: var(--accent1);
+    box-shadow: 0 0 20px rgba(79,156,249,0.12);
+  }
+
+  .flow-node .city {
+    font-weight: 600;
+  }
+
+  .t { color: var(--accent1); }
+  .l { color: var(--accent2); }
+  .n { color: var(--accent3); }
+  .to { color: var(--accent4); }
+
+  .node-gap { margin-bottom: 10px; }
+
+  /* arrows between stages */
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 44px;
+    width: 36px;
+    flex-shrink: 0;
+  }
+
+  .arrow-col svg { display: block; }
+
+  .result-node {
+    background: linear-gradient(135deg, rgba(79,156,249,0.12), rgba(34,211,165,0.08));
+    border: 1.5px solid var(--accent3);
+    border-radius: 10px;
+    padding: 16px 18px;
+    width: 90%;
+    font-size: 0.82rem;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.85;
+  }
+
+  /* ─── STEP BY STEP ─── */
+  .steps-section {
+    max-width: 860px;
+    margin: 0 auto 80px;
+  }
+
+  .steps-section h2 {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 36px;
+  }
+
+  .step {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--step-color, var(--accent1));
+    color: #000;
+    margin-top: 2px;
+  }
+
+  .step-body h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--highlight);
+  }
+
+  .step-body p {
+    color: #94a3b8;
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  .code-block {
+    background: #0a0c10;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    color: #94a3b8;
+    overflow-x: auto;
+  }
+
+  .kw { color: var(--accent4); }
+  .val { color: var(--accent3); }
+  .com { color: #4a5568; font-style: italic; }
+  .ky { color: var(--accent1); }
+
+  /* ─── ANALOGY ─── */
+  .analogy {
+    background: linear-gradient(135deg, rgba(247,115,22,0.08), rgba(79,156,249,0.05));
+    border: 1px solid rgba(247,115,22,0.25);
+    border-radius: 14px;
+    padding: 28px 32px;
+    max-width: 860px;
+    margin: 0 auto 80px;
+  }
+
+  .analogy h2 {
+    font-size: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+
+  .analogy p {
+    color: #94a3b8;
+    font-size: 0.92rem;
+    line-height: 1.75;
+  }
+
+  .analogy strong { color: var(--text); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .connector-lines {
+    position: relative;
+  }
+
+  .shuffle-node {
+    margin-bottom: 10px;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    width: 90%;
+    font-size: 0.74rem;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.75;
+  }
+
+  .reduce-node {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    width: 90%;
+    font-size: 0.8rem;
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>MapReduce</h1>
+  <p>A programming model for processing massive datasets in parallel across many machines — split, transform, sort, and aggregate.</p>
+</div>
+
+<div class="concept">
+  <h2>// Core Idea</h2>
+  <p>
+    MapReduce breaks a <strong>huge problem</strong> into smaller chunks, processes each chunk independently (<strong>Map</strong>), then merges the results (<strong>Reduce</strong>). It's like splitting a massive spreadsheet among 100 people, having each count their section, then adding all counts together.
+  </p>
+</div>
+
+<!-- PHASE CARDS -->
+<div class="phases">
+  <div class="phases-title">// The 5 Phases</div>
+  <div class="phases-grid">
+    <div class="phase-card" style="--phase-color:#4f9cf9; animation-delay:0.1s">
+      <div class="phase-icon">📥</div>
+      <div class="num">01</div>
+      <h3>Input</h3>
+      <p>Raw data — could be millions of lines, log files, or records from a database.</p>
+    </div>
+    <div class="phase-card" style="--phase-color:#22d3a5; animation-delay:0.2s">
+      <div class="phase-icon">✂️</div>
+      <div class="num">02</div>
+      <h3>Splitting</h3>
+      <p>The input is divided into equal-sized chunks so multiple workers can process in parallel.</p>
+    </div>
+    <div class="phase-card" style="--phase-color:#f97316; animation-delay:0.3s">
+      <div class="phase-icon">🗺️</div>
+      <div class="num">03</div>
+      <h3>Mapping</h3>
+      <p>Each worker processes its chunk and emits key-value pairs. e.g. <code>("apple", 1)</code></p>
+    </div>
+    <div class="phase-card" style="--phase-color:#a78bfa; animation-delay:0.4s">
+      <div class="phase-icon">🔀</div>
+      <div class="num">04</div>
+      <h3>Shuffling</h3>
+      <p>All pairs with the same key are grouped together and sent to the same reducer.</p>
+    </div>
+    <div class="phase-card" style="--phase-color:#fb7185; animation-delay:0.5s">
+      <div class="phase-icon">📊</div>
+      <div class="num">05</div>
+      <h3>Reducing</h3>
+      <p>Each reducer aggregates its group of values into a single output: the final answer.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FLOW DIAGRAM — Word Count Example -->
+<div class="diagram-section">
+  <h2>Flow Diagram — Word Count Example</h2>
+  <div class="sub">// Input: "the cat sat on the mat the cat"</div>
+
+  <div class="flow-wrapper">
+    <div class="flow">
+
+      <!-- INPUT -->
+      <div class="flow-stage">
+        <div class="stage-header">Input</div>
+        <div class="flow-node">
+          <span class="t">the</span> cat sat<br>
+          on <span class="t">the</span> mat<br>
+          <span class="t">the</span> cat
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg width="28" height="20" viewBox="0 0 28 20"><path d="M0 10 H20 M14 4 L22 10 L14 16" stroke="#4f9cf9" stroke-width="1.5" fill="none"/></svg>
+      </div>
+
+      <!-- SPLITTING -->
+      <div class="flow-stage">
+        <div class="stage-header">Split</div>
+        <div class="flow-node node-gap">
+          <span class="t">the</span> cat sat
+        </div>
+        <div class="flow-node node-gap">
+          on <span class="t">the</span> mat
+        </div>
+        <div class="flow-node">
+          <span class="t">the</span> cat
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg width="28" height="20" viewBox="0 0 28 20"><path d="M0 10 H20 M14 4 L22 10 L14 16" stroke="#f97316" stroke-width="1.5" fill="none"/></svg>
+      </div>
+
+      <!-- MAPPING -->
+      <div class="flow-stage">
+        <div class="stage-header">Map</div>
+        <div class="flow-node node-gap" style="font-size:0.72rem">
+          <span class="t">(the,1)</span> (cat,1) (sat,1)
+        </div>
+        <div class="flow-node node-gap" style="font-size:0.72rem">
+          (on,1) <span class="t">(the,1)</span> (mat,1)
+        </div>
+        <div class="flow-node" style="font-size:0.72rem">
+          <span class="t">(the,1)</span> (cat,1)
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg width="28" height="20" viewBox="0 0 28 20"><path d="M0 10 H20 M14 4 L22 10 L14 16" stroke="#a78bfa" stroke-width="1.5" fill="none"/></svg>
+      </div>
+
+      <!-- SHUFFLE -->
+      <div class="flow-stage">
+        <div class="stage-header">Shuffle</div>
+        <div class="shuffle-node">
+          <span class="t">the → [1,1,1]</span>
+        </div>
+        <div class="shuffle-node">
+          <span class="n">cat → [1,1]</span>
+        </div>
+        <div class="shuffle-node">
+          <span class="l">sat → [1]</span>
+        </div>
+        <div class="shuffle-node">
+          <span class="to">mat → [1]</span>
+        </div>
+        <div class="shuffle-node">
+          on → [1]
+        </div>
+      </div>
+
+      <div class="arrow-col">
+        <svg width="28" height="20" viewBox="0 0 28 20"><path d="M0 10 H20 M14 4 L22 10 L14 16" stroke="#22d3a5" stroke-width="1.5" fill="none"/></svg>
+      </div>
+
+      <!-- REDUCE -->
+      <div class="flow-stage">
+        <div class="stage-header">Reduce</div>
+        <div class="reduce-node"><span class="t">the → 3</span></div>
+        <div class="reduce-node"><span class="n">cat → 2</span></div>
+        <div class="reduce-node"><span class="l">sat → 1</span></div>
+        <div class="reduce-node"><span class="to">mat → 1</span></div>
+        <div class="reduce-node">on → 1</div>
+      </div>
+
+      <div class="arrow-col">
+        <svg width="28" height="20" viewBox="0 0 28 20"><path d="M0 10 H20 M14 4 L22 10 L14 16" stroke="#22d3a5" stroke-width="1.5" fill="none"/></svg>
+      </div>
+
+      <!-- RESULT -->
+      <div class="flow-stage">
+        <div class="stage-header">Result</div>
+        <div class="result-node">
+          <span class="t">the: 3</span><br>
+          <span class="n">cat: 2</span><br>
+          <span class="l">sat: 1</span><br>
+          <span class="to">mat: 1</span><br>
+          on: 1
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- STEP BY STEP -->
+<div class="steps-section">
+  <h2>Step-by-Step Walkthrough</h2>
+
+  <div class="step" style="--step-color:#4f9cf9">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Input Data</h3>
+      <p>You start with a sentence (or millions of lines of text, logs, etc.):</p>
+      <div class="code-block">
+        <span class="com">// The raw input</span><br>
+        <span class="val">"the cat sat on the mat the cat"</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" style="--step-color:#22d3a5">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Split into Chunks</h3>
+      <p>The framework divides data into 3 equal pieces — each handled by a separate worker (mapper).</p>
+      <div class="code-block">
+        <span class="com">// Worker 1 gets:</span>  <span class="ky">"the cat sat"</span><br>
+        <span class="com">// Worker 2 gets:</span>  <span class="ky">"on the mat"</span><br>
+        <span class="com">// Worker 3 gets:</span>  <span class="ky">"the cat"</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" style="--step-color:#f97316">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Map Phase — Emit Key-Value Pairs</h3>
+      <p>Each worker reads its words and emits a <code>(word, 1)</code> pair for every word it sees. Workers run <strong>in parallel</strong>.</p>
+      <div class="code-block">
+        <span class="com">// Worker 1 emits:</span><br>
+        <span class="t">(the,1)  (cat,1)  (sat,1)</span><br><br>
+        <span class="com">// Worker 2 emits:</span><br>
+        <span class="l">(on,1)  (the,1)  (mat,1)</span><br><br>
+        <span class="com">// Worker 3 emits:</span><br>
+        <span class="n">(the,1)  (cat,1)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" style="--step-color:#a78bfa">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Shuffle & Sort — Group by Key</h3>
+      <p>The framework automatically collects all pairs with the same key and groups them together. This is done <strong>automatically</strong> — you don't write this code.</p>
+      <div class="code-block">
+        <span class="t">the  → [1, 1, 1]</span><br>
+        <span class="n">cat  → [1, 1]</span><br>
+        <span class="l">sat  → [1]</span><br>
+        <span class="kw">mat  → [1]</span><br>
+        on   → [1]
+      </div>
+    </div>
+  </div>
+
+  <div class="step" style="--step-color:#fb7185">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>Reduce Phase — Aggregate</h3>
+      <p>Each reducer receives one key and its list of values, then produces a final answer by summing (or any other operation).</p>
+      <div class="code-block">
+        <span class="kw">function</span> <span class="val">reduce</span>(key, values) {<br>
+        &nbsp;&nbsp;<span class="kw">return</span> (key, <span class="val">sum</span>(values));<br>
+        }<br><br>
+        <span class="com">// reduce("the", [1,1,1])  →  ("the", 3)</span><br>
+        <span class="com">// reduce("cat", [1,1])    →  ("cat", 2)</span><br>
+        <span class="com">// reduce("sat", [1])      →  ("sat", 1)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" style="--step-color:#22d3a5">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <h3>Final Output</h3>
+      <p>The results from all reducers are collected into the final output — a word frequency count.</p>
+      <div class="code-block">
+        <span class="t">the: 3</span> &nbsp; <span class="n">cat: 2</span> &nbsp; <span class="l">sat: 1</span> &nbsp; <span class="kw">mat: 1</span> &nbsp; on: 1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALOGY -->
+<div class="analogy">
+  <h2>// Real-World Analogy</h2>
+  <p>
+    Imagine you have <strong>10,000 survey forms</strong> to tally. Instead of one person counting all of them, you give <strong>100 friends</strong> 100 forms each (splitting). Each friend reads their forms and writes down tallies on sticky notes — one note per answer (<strong>mapping</strong>). Then you collect all the sticky notes and group them by answer (<strong>shuffling</strong>). Finally, each pile gets counted by one person (<strong>reducing</strong>), and you combine all those totals into your final report.
+    <br><br>
+    That's MapReduce. <strong>Divide the work. Process in parallel. Merge the results.</strong>
+  </p>
+</div>
+
+</body>
+</html>
